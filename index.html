@@ -1,400 +1,218 @@
+from pathlib import Path
 
-<!DOCTYPE html>
+html = r'''<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Un parmi des milliards</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 20px;
-      background: #101827; color: white;
-      font-family: Arial, sans-serif;
-    }
-    main {
-      max-width: 500px; margin: 25px auto;
-      padding: 22px; border-radius: 18px;
-      background: #1d2b42;
-    }
-    h1 { text-align: center; }
-    p { line-height: 1.5; }
-    input, button {
-      width: 100%; padding: 13px; margin: 7px 0;
-      border: 0; border-radius: 9px; font-size: 16px;
-    }
-    input { background: #fff; color: #111; }
-    button {
-      background: #56c5a8; color: #10231f;
-      font-weight: bold; cursor: pointer;
-    }
-    button.secondary { background: #344965; color: white; }
-    #status { color: #a9ddcf; overflow-wrap: anywhere; }
-    #room { font-size: 28px; letter-spacing: 4px; text-align: center; }
-    li { padding: 6px 0; }
-    .muted { color: #bdc8d8; font-size: 14px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101827">
+<title>Un parmi des milliards — V1</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1120;--panel:#151f32;--panel2:#1c2940;--text:#edf3ff;--muted:#a9b7cf;--accent:#7dd3fc;--good:#86efac;--warn:#fcd34d;--bad:#fca5a5}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#182846,var(--bg) 65%);color:var(--text);font:16px system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:900px;margin:auto;padding:18px 13px 40px}.hero{text-align:center;padding:16px 4px 20px}.hero h1{font-size:clamp(1.7rem,7vw,2.6rem);margin:0 0 7px}.hero p{color:var(--muted);margin:0}
+.card{background:rgba(21,31,50,.96);border:1px solid #2b3b58;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 8px 25px #0002}.card h2{font-size:1.15rem;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+label{display:block;color:var(--muted);font-size:.88rem;margin:0 0 5px}input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid #40516f;background:#0c1526;color:var(--text);font:inherit}textarea{min-height:86px;resize:vertical}
+button{border:0;border-radius:11px;padding:12px 14px;font:inherit;font-weight:700;background:var(--accent);color:#092033;cursor:pointer}button.secondary{background:#34445f;color:var(--text)}button.danger{background:#7f303d;color:white}button:disabled{opacity:.45}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.status{font-size:.9rem;color:var(--muted);margin-top:8px;overflow-wrap:anywhere}.hidden{display:none!important}.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{background:#0c1526;padding:10px;border-radius:10px}.stat strong{display:block;font-size:1.15rem}.stat span{font-size:.8rem;color:var(--muted)}
+.feed{display:flex;flex-direction:column;gap:8px}.event{padding:10px 12px;background:#0c1526;border-left:3px solid #5c8eb7;border-radius:8px}.event small{color:var(--muted)}.event p{margin:4px 0 0}.pill{display:inline-block;background:#293b56;color:#dcecff;padding:4px 9px;border-radius:99px;font-size:.8rem;margin:3px 4px 3px 0}.players{display:flex;gap:7px;flex-wrap:wrap}.notice{color:var(--warn);font-size:.9rem}.ok{color:var(--good)}footer{text-align:center;color:var(--muted);font-size:.82rem;padding:14px}
+</style>
 </head>
 <body>
 <main>
-  <h1>🌍 Un parmi des milliards</h1>
-  <p>Chaque personne a son histoire. Retrouve tes amis dans un même salon !</p>
+  <header class="hero">
+    <h1>🌍 Un parmi des milliards</h1>
+    <p>Une vie, des choix, un monde qui continue de tourner.</p>
+  </header>
 
-  <label for="playerName">Ton prénom ou pseudo</label>
-  <input id="playerName" maxlength="20" placeholder="Ex. Explorateur11">
-
-  <button id="createBtn">🌟 Créer un salon</button>
-
-  <hr>
-  <label for="roomInput">Code du salon</label>
-  <input id="roomInput" maxlength="6" placeholder="Ex. A1B2C3">
-  <button id="joinBtn" class="secondary">👥 Rejoindre un salon</button>
-
-  <section id="lobby" hidden>
-    <hr>
-    <p>Code à partager avec tes amis :</p>
-    <p id="room" aria-live="polite"></p>
-    <button id="copyBtn" class="secondary">📋 Copier le code</button>
-    <h3>Joueurs présents</h3>
-    <ul id="players"></ul>
-    <p class="muted">Les joueurs présents se mettent à jour automatiquement.</p>
-    <button id="leaveBtn" class="secondary">Quitter le salon</button>
+  <section class="card" id="lobby">
+    <h2>🚪 Salon multijoueur</h2>
+    <div class="grid">
+      <div><label for="nickname">Ton pseudo (max. 20 caractères)</label><input id="nickname" maxlength="20" placeholder="Ex. Alex"></div>
+      <div><label for="roomCode">Code du salon</label><input id="roomCode" maxlength="6" placeholder="ABC123" autocapitalize="characters"></div>
+    </div>
+    <div class="actions">
+      <button id="createRoom">Créer un salon</button>
+      <button class="secondary" id="joinRoom">Rejoindre</button>
+    </div>
+    <p class="status" id="connectionStatus">Connexion à Firebase en cours…</p>
+    <p class="status" id="roomStatus"></p>
+    <div id="playersBox" class="hidden"><label>Joueurs présents</label><div id="players" class="players"></div></div>
   </section>
 
-  <p id="status" role="status">Connexion à Firebase…</p>
-  <p class="muted">Prototype multijoueur — la simulation du jeu viendra ensuite.</p>
+  <section class="card hidden" id="setup">
+    <h2>🧑 Crée ton personnage</h2>
+    <div class="grid">
+      <div><label for="charName">Prénom fictif</label><input id="charName" maxlength="24" placeholder="Ex. Sam"></div>
+      <div><label for="age">Âge</label><input id="age" type="number" min="1" max="110" value="22"></div>
+      <div><label for="country">Pays</label><input id="country" maxlength="40" value="France"></div>
+      <div><label for="city">Ville</label><input id="city" maxlength="40" value="Nantes"></div>
+      <div><label for="job">Métier / activité</label><select id="job"><option>Étudiant</option><option>Employé</option><option>Artisan</option><option>Scientifique</option><option>Artiste</option><option>Commerçant</option><option>Sans emploi</option><option>Retraité</option></select></div>
+      <div><label for="personality">Personnalité</label><select id="personality"><option>Curieux</option><option>Prudent</option><option>Ambitieux</option><option>Créatif</option><option>Sociable</option><option>Indépendant</option></select></div>
+    </div>
+    <div class="actions"><button id="createCharacter">Commencer ma vie</button></div>
+    <p class="status">Utilise un personnage fictif : le jeu ne suit pas de vraies personnes.</p>
+  </section>
+
+  <section class="card hidden" id="game">
+    <h2>🧭 Ta vie</h2>
+    <div id="characterSummary"></div>
+    <div class="stats" id="stats"></div>
+    <h2 style="margin-top:16px">✍️ Que veux-tu faire ?</h2>
+    <label for="actionText">Écris une action (ex. « Je cherche un emploi »)</label>
+    <textarea id="actionText" maxlength="300" placeholder="Décris ce que ton personnage tente de faire…"></textarea>
+    <div class="actions">
+      <button id="doAction">Faire cette action</button>
+      <button class="secondary" id="advanceDay">Laisser passer une journée</button>
+    </div>
+    <p class="status" id="gameStatus">Les changements sont sauvegardés dans le salon.</p>
+  </section>
+
+  <section class="card hidden" id="world">
+    <h2>📰 Journal de vie</h2>
+    <div class="feed" id="feed"></div>
+  </section>
+  <footer>Version 1 — simulation autonome et multijoueur. Les événements sont simulés, pas générés par une IA externe pour l’instant.</footer>
 </main>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-  import {
-    getAuth, signInAnonymously, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
-  import {
-    getDatabase, ref, get, set, update, onValue, onDisconnect
-  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+import { getDatabase, ref, set, update, get, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyABKHihJbujp3wMNYrjbLeVN2Yc5Wr6aR4",
-    authDomain: "un-parmi-des-milliards.firebaseapp.com",
-    databaseURL: "https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "un-parmi-des-milliards",
-    storageBucket: "un-parmi-des-milliards.firebasestorage.app",
-    messagingSenderId: "468750554700",
-    appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyABKHihJbuj3pMNYrjbLeVN2Yc5WraR4",
+  authDomain: "un-parmi-des-milliards.firebaseapp.com",
+  databaseURL: "https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "un-parmi-des-milliards",
+  storageBucket: "un-parmi-des-milliards.firebasestorage.app",
+  messagingSenderId: "468750554700",
+  appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getDatabase(app);
-
-  const $ = id => document.getElementById(id);
-  let user = null;
-  let currentRoom = null;
-  let stopListening = null;
-
-  const status = message => $("status").textContent = message;
-
-  function getName() {
-    const name = $("playerName").value.trim().slice(0, 20);
-    if (!name) throw new Error("Entre d’abord un pseudo.");
-    return name;
+const $ = id => document.getElementById(id);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getDatabase(app);
+let uid = null, room = null, playerRef = null, roomListener = null, playerListener = null, myPlayer = null;
+let dayTimer = null;
+const connectionStatus = $('connectionStatus');
+function status(msg, good=false){ connectionStatus.textContent=msg; connectionStatus.className='status '+(good?'ok':''); }
+function cleanText(v,max=40){return String(v||'').trim().slice(0,max);}
+function randomCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<6;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;}
+function show(id,yes=true){$(id).classList.toggle('hidden',!yes);}
+function defaultCharacter(){return {name:'',age:22,country:'France',city:'Nantes',job:'Étudiant',personality:'Curieux',money:500,energy:80,mood:70,health:100,day:1,relationships:0,history:[]};}
+function appendEvent(text){
+  if(!myPlayer) return;
+  const c=myPlayer.character;
+  c.history=Array.isArray(c.history)?c.history:[];
+  c.history.unshift({day:c.day,text,at:Date.now()});
+  c.history=c.history.slice(0,15);
+}
+function render(){
+  if(!myPlayer || !myPlayer.character) return;
+  const c=myPlayer.character;
+  $('characterSummary').innerHTML='';
+  const summary=document.createElement('div');
+  summary.innerHTML=`<strong>${escapeHtml(c.name)}</strong> · ${Number(c.age)} ans<br><span class="pill">📍 ${escapeHtml(c.city)}, ${escapeHtml(c.country)}</span><span class="pill">💼 ${escapeHtml(c.job)}</span><span class="pill">🧠 ${escapeHtml(c.personality)}</span><span class="pill">Jour ${Number(c.day)}</span>`;
+  $('characterSummary').append(summary);
+  const stats=[['💶 Argent',`${Math.round(c.money)} €`],['⚡ Énergie',`${Math.round(c.energy)} / 100`],['🙂 Moral',`${Math.round(c.mood)} / 100`],['❤️ Santé',`${Math.round(c.health)} / 100`],['🤝 Relations',`${Math.round(c.relationships)}`],['📅 Jour',`${Math.round(c.day)}`]];
+  $('stats').innerHTML=stats.map(([n,v])=>`<div class="stat"><span>${n}</span><strong>${v}</strong></div>`).join('');
+  $('feed').innerHTML='';
+  for(const e of (c.history||[])){
+    const el=document.createElement('div');el.className='event';
+    const small=document.createElement('small');small.textContent='Jour '+e.day;
+    const p=document.createElement('p');p.textContent=e.text;
+    el.append(small,p);$('feed').append(el);
   }
-
-  function makeCode() {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    return Array.from({length: 6}, () =>
-      chars[Math.floor(Math.random() * chars.length)]
-    ).join("");
-  }
-
-  async function enterRoom(code, name, create = false) {
-    if (!user) throw new Error("Connexion en cours, réessaie dans un instant.");
-
-    code = code.toUpperCase().trim();
-    if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
-      throw new Error("Le code doit contenir 6 lettres ou chiffres.");
-    }
-
-    const roomRef = ref(db, `rooms/${code}`);
-    const snapshot = await get(roomRef);
-
-    if (create) {
-      if (snapshot.exists()) throw new Error("Ce code existe déjà. Réessaie.");
-      await set(roomRef, {
-        createdAt: Date.now(),
-        players: {
-          [user.uid]: { name, joinedAt: Date.now() }
-        }
-      });
-    } else {
-      if (!snapshot.exists()) throw new Error("Salon introuvable. Vérifie le code.");
-      await set(ref(db, `rooms/${code}/players/${user.uid}`), {
-        name, joinedAt: Date.now()
-      });
-    }
-
-    if (stopListening) stopListening();
-    currentRoom = code;
-    $("room").textContent = code;
-    $("lobby").hidden = false;
-    $("roomInput").value = code;
-
-    const playerRef = ref(db, `rooms/${code}/players/${user.uid}`);
-    await onDisconnect(playerRef).remove();
-
-    stopListening = onValue(roomRef, snap => {
-      if (!snap.exists()) {
-        $("players").replaceChildren();
-        status("Ce salon n’existe plus.");
-        return;
-      }
-      const players = snap.val().players || {};
-      const list = $("players");
-      list.replaceChildren();
-
-      Object.entries(players).forEach(([uid, player]) => {
-        const li = document.createElement("li");
-        li.textContent = player.name + (uid === user.uid ? " (toi)" : "");
-        list.appendChild(li);
-      });
-
-      status("Connecté au salon " + code + " ✓");
+  show('game');show('world');
+}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function autonomousDay(){
+  if(!myPlayer?.character)return;
+  const c=myPlayer.character;c.day++;
+  c.energy=Math.max(0,Math.min(100,c.energy+(Math.random()<.7?8:-8)));
+  c.mood=Math.max(0,Math.min(100,c.mood+(Math.random()<.55?4:-3)));
+  c.health=Math.max(0,Math.min(100,c.health+(Math.random()<.8?1:-2)));
+  const events=[
+    ()=>{c.money+=Math.round(20+Math.random()*50);return `Une petite opportunité te rapporte ${Math.round(20+Math.random()*50)} €.`;},
+    ()=>{c.mood=Math.min(100,c.mood+8);c.relationships++;return 'Tu échanges avec quelqu’un et renforces une relation.';},
+    ()=>{c.energy=Math.min(100,c.energy+12);return 'Tu prends du temps pour te reposer et récupères de l’énergie.';},
+    ()=>{c.money=Math.max(0,c.money-25);return 'Une dépense imprévue de 25 € apparaît dans ton budget.';},
+    ()=>{c.mood=Math.max(0,c.mood-6);return 'Une journée un peu stressante met ton moral à l’épreuve.';},
+    ()=>{c.relationships++;return 'Tu fais une nouvelle connaissance dans ta ville.';}
+  ];
+  const event=events[Math.floor(Math.random()*events.length)]();
+  appendEvent(event);
+  savePlayer();
+}
+function applyAction(raw){
+  const text=cleanText(raw,300);if(!text){$('gameStatus').textContent='Écris une action avant de continuer.';return;}
+  const c=myPlayer.character, t=text.toLowerCase();let result='Tu essaies de réaliser cette action. Le résultat dépendra de tes ressources et des événements.';
+  if(/emploi|travail|job|recrut/.test(t)){if(c.energy<15)result='Tu es trop fatigué pour une recherche efficace. Essaie de te reposer.';else{c.money+=80;c.energy-=15;result='Tu avances dans ta recherche de travail et gagnes 80 € grâce à une petite mission.';}}
+  else if(/repos|dorm|sieste|reposer/.test(t)){c.energy=Math.min(100,c.energy+25);c.health=Math.min(100,c.health+2);result='Tu prends du repos : ton énergie remonte.';}
+  else if(/ami|rencontr|sort|discut|famille|relation/.test(t)){c.relationships+=1;c.mood=Math.min(100,c.mood+10);c.energy=Math.max(0,c.energy-5);result='Tu passes du temps avec d’autres personnes. Tes relations et ton moral progressent.';}
+  else if(/ach[eè]t|acheter|courses|magasin/.test(t)){if(c.money>=30){c.money-=30;c.mood=Math.min(100,c.mood+4);result='Tu fais un achat de 30 €. Cela te fait plaisir, mais ton budget diminue.';}else result='Tu n’as pas assez d’argent pour cet achat.';}
+  else if(/sport|cour|marche|entra[iî]n/.test(t)){c.energy=Math.max(0,c.energy-15);c.health=Math.min(100,c.health+5);result='Tu fais une activité physique : tu dépenses de l’énergie et prends soin de ta santé.';}
+  else if(/étud|etud|apprend|cours|recherche/.test(t)){c.energy=Math.max(0,c.energy-10);c.mood=Math.min(100,c.mood+3);result='Tu apprends quelque chose de nouveau. Tu progresses, même si cela demande de l’énergie.';}
+  else if(/déménag|demenag|voyage|partir/.test(t)){c.money=Math.max(0,c.money-50);result='Tu prépares un déplacement et dépenses 50 €.';}
+  c.day++;
+  appendEvent(`Action : « ${text} » — ${result}`);
+  $('actionText').value='';$('gameStatus').textContent='Action enregistrée. La vie continue !';
+  autonomousDay();render();savePlayer();
+}
+async function savePlayer(){
+  if(!playerRef||!myPlayer)return;
+  try{await update(playerRef,{name:myPlayer.name,joinedAt:myPlayer.joinedAt,character:myPlayer.character,updatedAt:Date.now()});}
+  catch(e){$('gameStatus').textContent='Sauvegarde impossible : '+e.message;}
+}
+async function enterRoom(code,create=false){
+  if(!uid){status('Connexion en cours, réessaie dans quelques secondes.');return;}
+  const nick=cleanText($('nickname').value,20)||'Joueur';
+  code=cleanText(code,6).toUpperCase();
+  if(create)code=randomCode();
+  if(!/^[A-Z0-9]{6}$/.test(code)){ $('roomStatus').textContent='Le code doit contenir 6 lettres ou chiffres.';return;}
+  const rref=ref(db,`rooms/${code}`);
+  try{
+    const snap=await get(rref);
+    if(create && snap.exists()){return enterRoom('',true);}
+    if(!create && !snap.exists()){$('roomStatus').textContent='Salon introuvable. Vérifie le code.';return;}
+    room=code;playerRef=ref(db,`rooms/${room}/players/${uid}`);
+    const existing=await get(playerRef);
+    const existingData=existing.val();
+    myPlayer={name:nick,joinedAt:existingData?.joinedAt||Date.now(),character:existingData?.character||null};
+    await set(playerRef,{name:nick,joinedAt:myPlayer.joinedAt,...(myPlayer.character?{character:myPlayer.character}:{})});
+    onDisconnect(playerRef).remove();
+    $('roomCode').value=room;$('roomStatus').textContent='Salon : '+room+' — partage ce code avec tes amis.';
+    show('playersBox');show('setup',!myPlayer.character);show('game',!!myPlayer.character);show('world',!!myPlayer.character);
+    if(myPlayer.character)render();
+    if(roomListener)roomListener();
+    roomListener=onValue(ref(db,`rooms/${room}/players`),s=>{
+      const players=s.val()||{};$('players').innerHTML='';
+      Object.values(players).forEach(p=>{const span=document.createElement('span');span.className='pill';span.textContent='👤 '+(p.name||'Joueur')+(p.character?.name?' — '+p.character.name:'');$('players').append(span);});
     });
-
-    status("Salon rejoint !");
-  }
-
-  $("createBtn").addEventListener("click", async () => {
-    try {
-      const name = getName();
-      let code;
-      for (let i = 0; i < 5; i++) {
-        code = makeCode();
-        if (!(await get(ref(db, `rooms/${code}`))).exists()) break;
-      }
-      await enterRoom(code, name, true);
-    } catch (e) {
-      status(e.message || "Impossible de créer le salon.");
-    }
-  });
-
-  $("joinBtn").addEventListener("click", async () => {
-    try {
-      await enterRoom($("roomInput").value, getName());
-    } catch (e) {
-      status(e.message || "Impossible de rejoindre le salon.");
-    }
-  });
-
-  $("copyBtn").addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(currentRoom);
-      status("Code copié ! Envoie-le à tes amis.");
-    } catch {
-      status("Ton code est : " + currentRoom + " — copie-le manuellement.");
-    }
-  });
-
-  $("leaveBtn").addEventListener("click", async () => {
-    if (!currentRoom || !user) return;
-    const code = currentRoom;
-    if (stopListening) stopListening();
-    stopListening = null;
-    currentRoom = null;
-    $("lobby").hidden = true;
-
-    try {
-      await set(ref(db, `rooms/${code}/players/${user.uid}`), null);
-      const snap = await get(ref(db, `rooms/${code}/players`));
-      if (!snap.exists() || Object.keys(snap.val()).length === 0) {
-        await set(ref(db, `rooms/${code}`), null);
-      }
-      status("Tu as quitté le salon.");
-    } catch {
-      status("Salon quitté localement. La déconnexion sera nettoyée si possible.");
-    }
-  });
-
-  onAuthStateChanged(auth, async currentUser => {
-    if (currentUser) {
-      user = currentUser;
-      status("Connecté à Firebase ✓");
-    } else {
-      try {
-        await signInAnonymously(auth);
-      } catch (e) {
-        status("Erreur de connexion : " + e.message);
-      }
-    }
-  });
+    status('Connecté à Firebase ✓',true);
+  }catch(e){$('roomStatus').textContent='Erreur Firebase : '+e.message;status('Vérifie les règles Firebase et la connexion.');}
+}
+$('createRoom').addEventListener('click',()=>enterRoom('',true));
+$('joinRoom').addEventListener('click',()=>enterRoom($('roomCode').value,false));
+$('createCharacter').addEventListener('click',async()=>{
+  if(!room||!myPlayer)return;
+  const name=cleanText($('charName').value,24);if(!name){$('gameStatus').textContent='Choisis un prénom fictif.';return;}
+  const c=defaultCharacter();c.name=name;c.age=Math.max(1,Math.min(110,Number($('age').value)||22));c.country=cleanText($('country').value)||'France';c.city=cleanText($('city').value)||'Nantes';c.job=$('job').value;c.personality=$('personality').value;
+  myPlayer.character=c;appendEvent(`${c.name} commence une nouvelle vie à ${c.city}, ${c.country}.`);
+  await savePlayer();show('setup',false);render();
+});
+$('doAction').addEventListener('click',()=>{if(myPlayer?.character)applyAction($('actionText').value);});
+$('advanceDay').addEventListener('click',()=>{if(myPlayer?.character){autonomousDay();render();$('gameStatus').textContent='Une journée a passé.';}});
+$('actionText').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')$('doAction').click();});
+$('roomCode').addEventListener('input',e=>{e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);});
+onAuthStateChanged(auth,user=>{if(user){uid=user.uid;status('Connecté à Firebase ✓',true);} });
+signInAnonymously(auth).catch(e=>status('Connexion Firebase impossible : '+e.message));
 </script>
 </body>
 </html>
-
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Un parmi des milliards</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; padding: 20px;
-      background: #101827; color: white;
-      font-family: Arial, sans-serif;
-    }
-    main {
-      max-width: 500px; margin: 25px auto;
-      padding: 22px; border-radius: 18px;
-      background: #1d2b42;
-    }
-    h1 { text-align: center; }
-    p { line-height: 1.5; }
-    input, button {
-      width: 100%; padding: 13px; margin: 7px 0;
-      border: 0; border-radius: 9px; font-size: 16px;
-    }
-    input { background: #fff; color: #111; }
-    button {
-      background: #56c5a8; color: #10231f;
-      font-weight: bold; cursor: pointer;
-    }
-    button.secondary { background: #344965; color: white; }
-    #status { color: #a9ddcf; overflow-wrap: anywhere; }
-    #room { font-size: 28px; letter-spacing: 4px; text-align: center; }
-    li { padding: 6px 0; }
-    .muted { color: #bdc8d8; font-size: 14px; }
-  </style>
-</head>
-<body>
-<main>
-  <h1>🌍 Un parmi des milliards</h1>
-  <p>Chaque personne a son histoire. Retrouve tes amis dans un même salon !</p>
-
-  <label for="playerName">Ton prénom ou pseudo</label>
-  <input id="playerName" maxlength="20" placeholder="Ex. Explorateur11">
-
-  <button id="createBtn">🌟 Créer un salon</button>
-
-  <hr>
-  <label for="roomInput">Code du salon</label>
-  <input id="roomInput" maxlength="6" placeholder="Ex. A1B2C3">
-  <button id="joinBtn" class="secondary">👥 Rejoindre un salon</button>
-
-  <section id="lobby" hidden>
-    <hr>
-    <p>Code à partager avec tes amis :</p>
-    <p id="room" aria-live="polite"></p>
-    <button id="copyBtn" class="secondary">📋 Copier le code</button>
-    <h3>Joueurs présents</h3>
-    <ul id="players"></ul>
-    <p class="muted">Les joueurs présents se mettent à jour automatiquement.</p>
-    <button id="leaveBtn" class="secondary">Quitter le salon</button>
-  </section>
-
-  <p id="status" role="status">Connexion à Firebase…</p>
-  <p class="muted">Prototype multijoueur — la simulation du jeu viendra ensuite.</p>
-</main>
-
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-  import {
-    getAuth, signInAnonymously, onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
-  import {
-    getDatabase, ref, get, set, update, onValue, onDisconnect
-  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyABKHihJbujp3wMNYrjbLeVN2Yc5Wr6aR4",
-    authDomain: "un-parmi-des-milliards.firebaseapp.com",
-    databaseURL: "https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "un-parmi-des-milliards",
-    storageBucket: "un-parmi-des-milliards.firebasestorage.app",
-    messagingSenderId: "468750554700",
-    appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getDatabase(app);
-
-  const $ = id => document.getElementById(id);
-  let user = null;
-  let currentRoom = null;
-  let stopListening = null;
-
-  const status = message => $("status").textContent = message;
-
-  function getName() {
-    const name = $("playerName").value.trim().slice(0, 20);
-    if (!name) throw new Error("Entre d’abord un pseudo.");
-    return name;
-  }
-
-  function makeCode() {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    return Array.from({length: 6}, () =>
-      chars[Math.floor(Math.random() * chars.length)]
-    ).join("");
-  }
-
-  async function enterRoom(code, name, create = false) {
-    if (!user) throw new Error("Connexion en cours, réessaie dans un instant.");
-
-    code = code.toUpperCase().trim();
-    if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
-      throw new Error("Le code doit contenir 6 lettres ou chiffres.");
-    }
-
-    const roomRef = ref(db, `rooms/${code}`);
-    const snapshot = await get(roomRef);
-
-    if (create) {
-      if (snapshot.exists()) throw new Error("Ce code existe déjà. Réessaie.");
-      await set(roomRef, {
-        createdAt: Date.now(),
-        players: {
-          [user.uid]: { name, joinedAt: Date.now() }
-        }
-      });
-    } else {
-      if (!snapshot.exists()) throw new Error("Salon introuvable. Vérifie le code.");
-      await set(ref(db, `rooms/${code}/players/${user.uid}`), {
-        name, joinedAt: Date.now()
-      });
-    }
-
-    if (stopListening) stopListening();
-    currentRoom = code;
-    $("room").textContent = code;
-    $("lobby").hidden = false;
-    $("roomInput").value = code;
-
-    const playerRef = ref(db, `rooms/${code}/players/${user.uid}`);
-    await onDisconnect(playerRef).remove();
-
-    stopListening = onValue(roomRef, snap => {
-      if (!snap.exists()) {
-        $("players").replaceChildren();
-        status("Ce salon n’existe plus.");
-        return;
-      }
-      const players = snap.val().players || {};
-      const list = $("players");
-      list.replaceChildren();
-
-      Object.entries(players).forEach(([uid, player]) => {
-        const li = document.createElement("li");
-        li.textContent = player.name + (uid === user.uid ? " (toi)" : "");
-        list.appendChild(li);
-      });
-
-      status("Connecté au salon " + code + " ✓");
-    });
-
-    status("Salon rejoint !");
-  }
-
+'''
+path = Path("/mnt/data/un-parmi-des-milliards-v1.html")
+path.write_text(html, encoding="utf-8")
+print(f"Fichier créé : {path} ({len(html)} caractères)")
