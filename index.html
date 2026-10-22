@@ -21,6 +21,7 @@ const firebaseConfig = {
   messagingSenderId: "468750554700",
   appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
 };
+  
 const $=x=>document.getElementById(x),app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);let uid=null,room=null,pRef=null,me=null,roomOff=null;
 const clean=(v,n=40)=>String(v||"").trim().slice(0,n),show=(id,b=true)=>$(id).classList.toggle("hidden",!b);
 function status(s,ok=false){$("connectionStatus").textContent=s;$("connectionStatus").className="status "+(ok?"ok":"")}
