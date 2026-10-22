@@ -1,4 +1,4 @@
-from pathlib import Path
+
 html = '''<!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101827"><title>Un parmi des milliards — V2 sociale</title>
 <style>
@@ -12,7 +12,15 @@ html = '''<!DOCTYPE html>
 <footer>V2 sociale — événements simulés, sans IA générative externe pour le moment.</footer></main>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";import{getAuth,signInAnonymously,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";import{getDatabase,ref,set,update,get,onValue,onDisconnect}from"https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
-const cfg={apiKey:"AIzaSyABKHihJbuj3pMNYrjbLeVN2Yc5Wr6aR4",authDomain:"un-parmi-des-milliards.firebaseapp.com",databaseURL:"https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",projectId:"un-parmi-des-milliards",storageBucket:"un-parmi-des-milliards.firebasestorage.app",messagingSenderId:"468750554700",appId:"1:468750554700:web:b5df6b23f42a04ef6c86e9"};
+const firebaseConfig = {
+  apiKey: "AIzaSyABKHihJbujp3wMNYrjbLeVN2Yc5Wr6aR4",
+  authDomain: "un-parmi-des-milliards.firebaseapp.com",
+  databaseURL: "https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "un-parmi-des-milliards",
+  storageBucket: "un-parmi-des-milliards.firebasestorage.app",
+  messagingSenderId: "468750554700",
+  appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
+};
 const $=x=>document.getElementById(x),app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);let uid=null,room=null,pRef=null,me=null,roomOff=null;
 const clean=(v,n=40)=>String(v||"").trim().slice(0,n),show=(id,b=true)=>$(id).classList.toggle("hidden",!b);
 function status(s,ok=false){$("connectionStatus").textContent=s;$("connectionStatus").className="status "+(ok?"ok":"")}
@@ -38,6 +46,3 @@ async function enter(input,create=false){if(!uid){$("roomStatus").textContent="C
 $("createRoom").onclick=()=>enter("",true);$("joinRoom").onclick=()=>enter($("roomCode").value);$("createCharacter").onclick=async()=>{if(!room||!me)return;let name=clean($("charName").value,24);if(!name){$("gameStatus").textContent="Choisis un prénom fictif.";return}let c=fresh();Object.assign(c,{name,age:Math.max(1,Math.min(110,Number($("age").value)||22)),country:clean($("country").value)||"France",city:clean($("city").value)||"Nantes",job:$("job").value,personality:$("personality").value});me.character=c;addEvent(name+" commence une nouvelle vie à "+c.city+", "+c.country+".");await save();show("setup",false);render()};$("doAction").onclick=()=>{if(me?.character)action($("actionText").value)};$("advanceDay").onclick=()=>{if(me?.character)day()};$("roomCode").oninput=e=>e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
 onAuthStateChanged(auth,u=>{if(u){uid=u.uid;status("Connecté à Firebase ✓",true)}});signInAnonymously(auth).catch(e=>status("Connexion Firebase impossible : "+e.message));
 </script></body></html>'''
-p=Path("/mnt/data/un-parmi-des-milliards-v2-vie-sociale.html")
-p.write_text(html, encoding="utf-8")
-print(f"Fichier créé : {p} ({len(html)} caractères)")
