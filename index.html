@@ -1,4 +1,4 @@
-from pathlib import Path
+ilfrom pathlib import Path
 
 html = r'''<!DOCTYPE html>
 <html lang="fr">
@@ -81,7 +81,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gsta
 import { getDatabase, ref, set, update, get, onValue, onDisconnect, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyABKHihJbuj3pMNYrjbLeVN2Yc5WraR4",
+  apiKey: "AIzaSyABKHihJbujp3wMNYrjbLeVN2Yc5Wr6aR4",
   authDomain: "un-parmi-des-milliards.firebaseapp.com",
   databaseURL: "https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "un-parmi-des-milliards",
@@ -212,7 +212,5 @@ signInAnonymously(auth).catch(e=>status('Connexion Firebase impossible : '+e.mes
 </script>
 </body>
 </html>
-'''
-path = Path("/mnt/data/un-parmi-des-milliards-v1.html")
-path.write_text(html, encoding="utf-8")
-print(f"Fichier créé : {path} ({len(html)} caractères)")
+
+
