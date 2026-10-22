@@ -6,39 +6,462 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Un parmi des milliards</title>
   <style>
+    * { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 24px;
-      background: #101827;
-      color: white;
+      margin: 0; padding: 20px;
+      background: #101827; color: white;
       font-family: Arial, sans-serif;
-      text-align: center;
     }
     main {
-      max-width: 500px;
-      margin: 40px auto;
-      padding: 24px;
-      border-radius: 18px;
+      max-width: 500px; margin: 25px auto;
+      padding: 22px; border-radius: 18px;
       background: #1d2b42;
     }
-    button {
-      padding: 12px 20px;
-      border: 0;
-      border-radius: 10px;
-      background: #56c5a8;
-      color: #10231f;
-      font-size: 16px;
+    h1 { text-align: center; }
+    p { line-height: 1.5; }
+    input, button {
+      width: 100%; padding: 13px; margin: 7px 0;
+      border: 0; border-radius: 9px; font-size: 16px;
     }
+    input { background: #fff; color: #111; }
+    button {
+      background: #56c5a8; color: #10231f;
+      font-weight: bold; cursor: pointer;
+    }
+    button.secondary { background: #344965; color: white; }
+    #status { color: #a9ddcf; overflow-wrap: anywhere; }
+    #room { font-size: 28px; letter-spacing: 4px; text-align: center; }
+    li { padding: 6px 0; }
+    .muted { color: #bdc8d8; font-size: 14px; }
   </style>
 </head>
 <body>
-  <main>
-    <h1>🌍 Un parmi des milliards</h1>
-    <p>Le monde est immense. Quelle histoire vas-tu découvrir ?</p>
-    <button onclick="alert('Bienvenue dans ton aventure !')">
-      Commencer
-    </button>
-    <p>Version de départ — multijoueur à venir.</p>
-  </main>
+<main>
+  <h1>🌍 Un parmi des milliards</h1>
+  <p>Chaque personne a son histoire. Retrouve tes amis dans un même salon !</p>
+
+  <label for="playerName">Ton prénom ou pseudo</label>
+  <input id="playerName" maxlength="20" placeholder="Ex. Explorateur11">
+
+  <button id="createBtn">🌟 Créer un salon</button>
+
+  <hr>
+  <label for="roomInput">Code du salon</label>
+  <input id="roomInput" maxlength="6" placeholder="Ex. A1B2C3">
+  <button id="joinBtn" class="secondary">👥 Rejoindre un salon</button>
+
+  <section id="lobby" hidden>
+    <hr>
+    <p>Code à partager avec tes amis :</p>
+    <p id="room" aria-live="polite"></p>
+    <button id="copyBtn" class="secondary">📋 Copier le code</button>
+    <h3>Joueurs présents</h3>
+    <ul id="players"></ul>
+    <p class="muted">Les joueurs présents se mettent à jour automatiquement.</p>
+    <button id="leaveBtn" class="secondary">Quitter le salon</button>
+  </section>
+
+  <p id="status" role="status">Connexion à Firebase…</p>
+  <p class="muted">Prototype multijoueur — la simulation du jeu viendra ensuite.</p>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+  import {
+    getDatabase, ref, get, set, update, onValue, onDisconnect
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyABKHihJbujp3wMNYrjbLeVN2Yc5Wr6aR4",
+    authDomain: "un-parmi-des-milliards.firebaseapp.com",
+    databaseURL: "https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "un-parmi-des-milliards",
+    storageBucket: "un-parmi-des-milliards.firebasestorage.app",
+    messagingSenderId: "468750554700",
+    appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  const $ = id => document.getElementById(id);
+  let user = null;
+  let currentRoom = null;
+  let stopListening = null;
+
+  const status = message => $("status").textContent = message;
+
+  function getName() {
+    const name = $("playerName").value.trim().slice(0, 20);
+    if (!name) throw new Error("Entre d’abord un pseudo.");
+    return name;
+  }
+
+  function makeCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    return Array.from({length: 6}, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+  }
+
+  async function enterRoom(code, name, create = false) {
+    if (!user) throw new Error("Connexion en cours, réessaie dans un instant.");
+
+    code = code.toUpperCase().trim();
+    if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
+      throw new Error("Le code doit contenir 6 lettres ou chiffres.");
+    }
+
+    const roomRef = ref(db, `rooms/${code}`);
+    const snapshot = await get(roomRef);
+
+    if (create) {
+      if (snapshot.exists()) throw new Error("Ce code existe déjà. Réessaie.");
+      await set(roomRef, {
+        createdAt: Date.now(),
+        players: {
+          [user.uid]: { name, joinedAt: Date.now() }
+        }
+      });
+    } else {
+      if (!snapshot.exists()) throw new Error("Salon introuvable. Vérifie le code.");
+      await set(ref(db, `rooms/${code}/players/${user.uid}`), {
+        name, joinedAt: Date.now()
+      });
+    }
+
+    if (stopListening) stopListening();
+    currentRoom = code;
+    $("room").textContent = code;
+    $("lobby").hidden = false;
+    $("roomInput").value = code;
+
+    const playerRef = ref(db, `rooms/${code}/players/${user.uid}`);
+    await onDisconnect(playerRef).remove();
+
+    stopListening = onValue(roomRef, snap => {
+      if (!snap.exists()) {
+        $("players").replaceChildren();
+        status("Ce salon n’existe plus.");
+        return;
+      }
+      const players = snap.val().players || {};
+      const list = $("players");
+      list.replaceChildren();
+
+      Object.entries(players).forEach(([uid, player]) => {
+        const li = document.createElement("li");
+        li.textContent = player.name + (uid === user.uid ? " (toi)" : "");
+        list.appendChild(li);
+      });
+
+      status("Connecté au salon " + code + " ✓");
+    });
+
+    status("Salon rejoint !");
+  }
+
+  $("createBtn").addEventListener("click", async () => {
+    try {
+      const name = getName();
+      let code;
+      for (let i = 0; i < 5; i++) {
+        code = makeCode();
+        if (!(await get(ref(db, `rooms/${code}`))).exists()) break;
+      }
+      await enterRoom(code, name, true);
+    } catch (e) {
+      status(e.message || "Impossible de créer le salon.");
+    }
+  });
+
+  $("joinBtn").addEventListener("click", async () => {
+    try {
+      await enterRoom($("roomInput").value, getName());
+    } catch (e) {
+      status(e.message || "Impossible de rejoindre le salon.");
+    }
+  });
+
+  $("copyBtn").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(currentRoom);
+      status("Code copié ! Envoie-le à tes amis.");
+    } catch {
+      status("Ton code est : " + currentRoom + " — copie-le manuellement.");
+    }
+  });
+
+  $("leaveBtn").addEventListener("click", async () => {
+    if (!currentRoom || !user) return;
+    const code = currentRoom;
+    if (stopListening) stopListening();
+    stopListening = null;
+    currentRoom = null;
+    $("lobby").hidden = true;
+
+    try {
+      await set(ref(db, `rooms/${code}/players/${user.uid}`), null);
+      const snap = await get(ref(db, `rooms/${code}/players`));
+      if (!snap.exists() || Object.keys(snap.val()).length === 0) {
+        await set(ref(db, `rooms/${code}`), null);
+      }
+      status("Tu as quitté le salon.");
+    } catch {
+      status("Salon quitté localement. La déconnexion sera nettoyée si possible.");
+    }
+  });
+
+  onAuthStateChanged(auth, async currentUser => {
+    if (currentUser) {
+      user = currentUser;
+      status("Connecté à Firebase ✓");
+    } else {
+      try {
+        await signInAnonymously(auth);
+      } catch (e) {
+        status("Erreur de connexion : " + e.message);
+      }
+    }
+  });
+</script>
 </body>
 </html>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Un parmi des milliards</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 20px;
+      background: #101827; color: white;
+      font-family: Arial, sans-serif;
+    }
+    main {
+      max-width: 500px; margin: 25px auto;
+      padding: 22px; border-radius: 18px;
+      background: #1d2b42;
+    }
+    h1 { text-align: center; }
+    p { line-height: 1.5; }
+    input, button {
+      width: 100%; padding: 13px; margin: 7px 0;
+      border: 0; border-radius: 9px; font-size: 16px;
+    }
+    input { background: #fff; color: #111; }
+    button {
+      background: #56c5a8; color: #10231f;
+      font-weight: bold; cursor: pointer;
+    }
+    button.secondary { background: #344965; color: white; }
+    #status { color: #a9ddcf; overflow-wrap: anywhere; }
+    #room { font-size: 28px; letter-spacing: 4px; text-align: center; }
+    li { padding: 6px 0; }
+    .muted { color: #bdc8d8; font-size: 14px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>🌍 Un parmi des milliards</h1>
+  <p>Chaque personne a son histoire. Retrouve tes amis dans un même salon !</p>
+
+  <label for="playerName">Ton prénom ou pseudo</label>
+  <input id="playerName" maxlength="20" placeholder="Ex. Explorateur11">
+
+  <button id="createBtn">🌟 Créer un salon</button>
+
+  <hr>
+  <label for="roomInput">Code du salon</label>
+  <input id="roomInput" maxlength="6" placeholder="Ex. A1B2C3">
+  <button id="joinBtn" class="secondary">👥 Rejoindre un salon</button>
+
+  <section id="lobby" hidden>
+    <hr>
+    <p>Code à partager avec tes amis :</p>
+    <p id="room" aria-live="polite"></p>
+    <button id="copyBtn" class="secondary">📋 Copier le code</button>
+    <h3>Joueurs présents</h3>
+    <ul id="players"></ul>
+    <p class="muted">Les joueurs présents se mettent à jour automatiquement.</p>
+    <button id="leaveBtn" class="secondary">Quitter le salon</button>
+  </section>
+
+  <p id="status" role="status">Connexion à Firebase…</p>
+  <p class="muted">Prototype multijoueur — la simulation du jeu viendra ensuite.</p>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+  import {
+    getDatabase, ref, get, set, update, onValue, onDisconnect
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyABKHihJbujp3wMNYrjbLeVN2Yc5Wr6aR4",
+    authDomain: "un-parmi-des-milliards.firebaseapp.com",
+    databaseURL: "https://un-parmi-des-milliards-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "un-parmi-des-milliards",
+    storageBucket: "un-parmi-des-milliards.firebasestorage.app",
+    messagingSenderId: "468750554700",
+    appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  const $ = id => document.getElementById(id);
+  let user = null;
+  let currentRoom = null;
+  let stopListening = null;
+
+  const status = message => $("status").textContent = message;
+
+  function getName() {
+    const name = $("playerName").value.trim().slice(0, 20);
+    if (!name) throw new Error("Entre d’abord un pseudo.");
+    return name;
+  }
+
+  function makeCode() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    return Array.from({length: 6}, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+  }
+
+  async function enterRoom(code, name, create = false) {
+    if (!user) throw new Error("Connexion en cours, réessaie dans un instant.");
+
+    code = code.toUpperCase().trim();
+    if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) {
+      throw new Error("Le code doit contenir 6 lettres ou chiffres.");
+    }
+
+    const roomRef = ref(db, `rooms/${code}`);
+    const snapshot = await get(roomRef);
+
+    if (create) {
+      if (snapshot.exists()) throw new Error("Ce code existe déjà. Réessaie.");
+      await set(roomRef, {
+        createdAt: Date.now(),
+        players: {
+          [user.uid]: { name, joinedAt: Date.now() }
+        }
+      });
+    } else {
+      if (!snapshot.exists()) throw new Error("Salon introuvable. Vérifie le code.");
+      await set(ref(db, `rooms/${code}/players/${user.uid}`), {
+        name, joinedAt: Date.now()
+      });
+    }
+
+    if (stopListening) stopListening();
+    currentRoom = code;
+    $("room").textContent = code;
+    $("lobby").hidden = false;
+    $("roomInput").value = code;
+
+    const playerRef = ref(db, `rooms/${code}/players/${user.uid}`);
+    await onDisconnect(playerRef).remove();
+
+    stopListening = onValue(roomRef, snap => {
+      if (!snap.exists()) {
+        $("players").replaceChildren();
+        status("Ce salon n’existe plus.");
+        return;
+      }
+      const players = snap.val().players || {};
+      const list = $("players");
+      list.replaceChildren();
+
+      Object.entries(players).forEach(([uid, player]) => {
+        const li = document.createElement("li");
+        li.textContent = player.name + (uid === user.uid ? " (toi)" : "");
+        list.appendChild(li);
+      });
+
+      status("Connecté au salon " + code + " ✓");
+    });
+
+    status("Salon rejoint !");
+  }
+
+  $("createBtn").addEventListener("click", async () => {
+    try {
+      const name = getName();
+      let code;
+      for (let i = 0; i < 5; i++) {
+        code = makeCode();
+        if (!(await get(ref(db, `rooms/${code}`))).exists()) break;
+      }
+      await enterRoom(code, name, true);
+    } catch (e) {
+      status(e.message || "Impossible de créer le salon.");
+    }
+  });
+
+  $("joinBtn").addEventListener("click", async () => {
+    try {
+      await enterRoom($("roomInput").value, getName());
+    } catch (e) {
+      status(e.message || "Impossible de rejoindre le salon.");
+    }
+  });
+
+  $("copyBtn").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(currentRoom);
+      status("Code copié ! Envoie-le à tes amis.");
+    } catch {
+      status("Ton code est : " + currentRoom + " — copie-le manuellement.");
+    }
+  });
+
+  $("leaveBtn").addEventListener("click", async () => {
+    if (!currentRoom || !user) return;
+    const code = currentRoom;
+    if (stopListening) stopListening();
+    stopListening = null;
+    currentRoom = null;
+    $("lobby").hidden = true;
+
+    try {
+      await set(ref(db, `rooms/${code}/players/${user.uid}`), null);
+      const snap = await get(ref(db, `rooms/${code}/players`));
+      if (!snap.exists() || Object.keys(snap.val()).length === 0) {
+        await set(ref(db, `rooms/${code}`), null);
+      }
+      status("Tu as quitté le salon.");
+    } catch {
+      status("Salon quitté localement. La déconnexion sera nettoyée si possible.");
+    }
+  });
+
+  onAuthStateChanged(auth, async currentUser => {
+    if (currentUser) {
+      user = currentUser;
+      status("Connecté à Firebase ✓");
+    } else {
+      try {
+        await signInAnonymously(auth);
+      } catch (e) {
+        status("Erreur de connexion : " + e.message);
+      }
+    }
+  });
+</script>
+</body>
+</html>
+
