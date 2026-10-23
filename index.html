@@ -54,5 +54,6 @@ window.addEventListener("unhandledrejection", e => {
   const el = document.getElementById("connectionStatus");
   if (el) el.textContent = "Erreur de chargement : " + e.reason;
 });
+  document.body.insertAdjacentHTML("afterbegin", "<p style='color:yellow;background:black;padding:12px'>TEST : le code Firebase est exécuté</p>");
   onAuthStateChanged(auth,u=>{if(u){uid=u.uid;status("Connecté à Firebase ✓",true)}});signInAnonymously(auth).catch(e=>status("Connexion Firebase impossible : "+e.message));
 </script></body></html>
