@@ -32,16 +32,95 @@ function relation(name,type="Ami(e)"){let c=me.character,k=name.toLowerCase().re
 function render(){if(!me?.character)return;let c=me.character;$("characterSummary").innerHTML="<strong>"+esc(c.name)+"</strong> · "+c.age+" ans<br><span class=pill>📍 "+esc(c.city)+", "+esc(c.country)+"</span><span class=pill>💼 "+esc(c.job)+"</span><span class=pill>🧠 "+esc(c.personality)+"</span><span class=pill>Jour "+c.day+"</span>";let ss=[["💶 Argent",Math.round(c.money)+" €"],["⚡ Énergie",Math.round(c.energy)+"/100"],["🙂 Moral",Math.round(c.mood)+"/100"],["❤️ Santé",Math.round(c.health)+"/100"],["🤝 Relations",Object.keys(c.relationships||{}).length],["📅 Jour",c.day]];$("stats").innerHTML=ss.map(x=>"<div class=stat><span>"+x[0]+"</span><strong>"+x[1]+"</strong></div>").join("");$("feed").replaceChildren();for(let e of c.history){let d=document.createElement("div");d.className="event";let s=document.createElement("small");s.textContent="Jour "+e.day;let p=document.createElement("p");p.textContent=e.text;d.append(s,p);$("feed").append(d)}$("relationships").replaceChildren();let rs=Object.values(c.relationships||{});if(!rs.length){let p=document.createElement("p");p.className="muted";p.textContent="Pas encore de relations. Essaie « Je rencontre quelqu’un »."; $("relationships").append(p)}for(let r of rs){let d=document.createElement("div");d.className="person";let b=document.createElement("strong");b.textContent=r.name;let s=document.createElement("span");s.className="small";s.textContent=r.type+" · Affinité "+r.affinity+"/100";d.append(b,s);$("relationships").append(d)}show("game");show("social");show("world")}
 async function save(){if(!pRef||!me)return;try{await update(pRef,{name:me.name,joinedAt:me.joinedAt,character:me.character,updatedAt:Date.now()})}catch(e){$("gameStatus").textContent="Erreur de sauvegarde : "+e.message}}
 function day(){let c=me.character;c.day++;c.energy=Math.max(0,Math.min(100,c.energy+(Math.random()<.7?8:-7)));c.mood=Math.max(0,Math.min(100,c.mood+(Math.random()<.6?4:-3)));c.health=Math.max(0,Math.min(100,c.health+(Math.random()<.8?1:-2)));let ev=[()=>{let n=Math.round(20+Math.random()*50);c.money+=n;return"Une petite mission te rapporte "+n+" €."},()=>{let r=Object.values(c.relationships||{});if(r.length){let x=r[Math.floor(Math.random()*r.length)];x.affinity=Math.min(100,x.affinity+5);return"Tu prends des nouvelles de "+x.name+" : votre lien se renforce."}let n=["Camille","Noah","Lina","Sacha","Maya","Léo"][Math.floor(Math.random()*6)];relation(n,"Nouvelle connaissance");return"Tu fais la connaissance de "+n+" dans ta ville."},()=>{c.energy=Math.min(100,c.energy+12);return"Tu te reposes et récupères de l’énergie."},()=>{c.money=Math.max(0,c.money-25);return"Une dépense imprévue de 25 € apparaît."},()=>{c.mood=Math.max(0,c.mood-6);return"Une journée stressante met ton moral à l’épreuve."}];addEvent(ev[Math.floor(Math.random()*ev.length)]());save();render()}
-function action(raw){let text=clean(raw,300);if(!text){$("gameStatus").textContent="Écris une action.";return}let c=me.character,t=text.toLowerCase(),res="Tu tentes cette action. La simulation enregistre ton choix.";
-if(/rencontr|faire connaissance|nouvelle connaissance/.test(t)){let n=["Camille","Noah","Lina","Sacha","Maya","Léo","Jules","Inès"][Math.floor(Math.random()*8)],r=relation(n,"Ami(e) potentiel(le)");c.mood=Math.min(100,c.mood+8);res="Tu rencontres "+n+". Vous commencez à faire connaissance (affinité "+r.affinity+"/100)."}
-else if(/ami|amitié|amitie|discut|famille|relation|appelle|message/.test(t)){let rs=Object.values(c.relationships||{});if(!rs.length){let r=relation("Camille","Ami(e)");r.affinity=65;res="Tu fais la connaissance de Camille et vous vous entendez bien."}else{let r=rs[0];r.affinity=Math.min(100,r.affinity+12);r.type=/famille|parent|frère|soeur|sœur/.test(t)?"Famille":"Ami(e)";c.mood=Math.min(100,c.mood+8);res="Tu échanges avec "+r.name+". Votre relation se renforce (affinité "+r.affinity+"/100)."}}
-else if(/emploi|travail|job|recrut/.test(t)){c.money+=80;c.energy=Math.max(0,c.energy-15);if(c.job==="Sans emploi")c.job="Employé";res="Tu réalises une petite mission et gagnes 80 €."}
-else if(/repos|dorm|sieste|reposer/.test(t)){c.energy=Math.min(100,c.energy+25);c.health=Math.min(100,c.health+2);res="Tu prends du repos et récupères de l’énergie."}
-else if(/achat|acheter|courses|magasin/.test(t)){if(c.money>=30){c.money-=30;c.mood=Math.min(100,c.mood+4);res="Tu fais un achat de 30 €."}else res="Tu n’as pas assez d’argent pour cet achat."}
-else if(/sport|cour|marche|entraîn|entrain/.test(t)){c.energy=Math.max(0,c.energy-15);c.health=Math.min(100,c.health+5);res="Tu fais une activité physique."}
-else if(/étud|etud|apprend|cours|recherche/.test(t)){c.energy=Math.max(0,c.energy-10);c.mood=Math.min(100,c.mood+3);res="Tu apprends quelque chose de nouveau."}
-else if(/voyage|déménag|demenag|partir/.test(t)){c.money=Math.max(0,c.money-50);res="Tu prépares un déplacement et dépenses 50 €."}
-c.day++;addEvent("Action : « "+text+" » — "+res);$("actionText").value="";$("gameStatus").textContent="Action enregistrée. La vie continue !";day()}
+
+async function action(raw) {
+  const text = clean(raw, 300);
+  if (!text) {
+    $("gameStatus").textContent = "Écris une action.";
+    return;
+  }
+
+  const c = me.character;
+  const button = $("doAction");
+  button.disabled = true;
+  $("gameStatus").textContent = "🤖 L'IA réfléchit à ton action…";
+
+  try {
+    const character = [
+      "Prénom : " + c.name,
+      "Âge : " + c.age,
+      "Ville : " + c.city + ", " + c.country,
+      "Métier : " + c.job,
+      "Personnalité : " + c.personality,
+      "Jour : " + c.day,
+      "Argent : " + c.money + " €",
+      "Énergie : " + c.energy + "/100",
+      "Moral : " + c.mood + "/100",
+      "Santé : " + c.health + "/100",
+      "Relations : " + Object.values(c.relationships || {})
+        .map(r => r.name + " (" + r.type + ", affinité " + r.affinity + "/100)")
+        .join(", ")
+    ].join("\n");
+
+    const response = await fetch(
+      "https://un-parmi-des-milliards-ia.robinlouis1107.workers.dev/",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: text, character })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.reply) {
+      throw new Error(data.error || "L'IA n'a pas répondu.");
+    }
+
+    const t = text.toLowerCase();
+    let result = data.reply;
+
+    // Conséquences simples sur les statistiques du personnage.
+    if (/emploi|travail|job|recrut/.test(t)) {
+      c.money += 80;
+      c.energy = Math.max(0, c.energy - 10);
+      if (c.job === "Sans emploi") c.job = "Employé";
+    } else if (/repos|dorm|sieste|reposer/.test(t)) {
+      c.energy = Math.min(100, c.energy + 20);
+      c.health = Math.min(100, c.health + 2);
+    } else if (/achat|acheter|courses|magasin/.test(t)) {
+      if (c.money >= 30) {
+        c.money -= 30;
+      } else {
+        result += "\n\nTu n'as pas assez d'argent pour un achat de 30 €.";
+      }
+    } else if (/sport|cour|marche|entraîn|entrain/.test(t)) {
+      c.energy = Math.max(0, c.energy - 15);
+      c.health = Math.min(100, c.health + 3);
+    } else if (/étud|etud|apprend|cours|recherche/.test(t)) {
+      c.energy = Math.max(0, c.energy - 10);
+      c.mood = Math.min(100, c.mood + 3);
+    } else if (/voyage|déménag|demenag|partir/.test(t)) {
+      c.money = Math.max(0, c.money - 50);
+    }
+
+    c.day++;
+    c.energy = Math.max(0, c.energy - 2);
+    addEvent("Action : « " + text + " » — " + result);
+    $("actionText").value = "";
+    $("gameStatus").textContent = "Action racontée par l'IA ✓";
+
+    await save();
+    render();
+  } catch (error) {
+    $("gameStatus").textContent =
+      "Erreur IA : " + error.message +
+      " Tu peux réessayer ; ton action n'a pas été enregistrée.";
+  } finally {
+    button.disabled = false;
+  }
+}
+  
 async function enter(input,create=false){if(!uid){$("roomStatus").textContent="Connexion en cours, réessaie.";return}let nick=clean($("nickname").value,20)||"Joueur",rc=create?newCode():clean(input,6).toUpperCase();if(!/^[A-Z0-9]{6}$/.test(rc)){$("roomStatus").textContent="Le code doit contenir 6 lettres ou chiffres.";return}try{let rr=ref(db,"rooms/"+rc),snap=await get(rr);if(create&&snap.exists())return enter("",true);if(!create&&!snap.exists()){$("roomStatus").textContent="Salon introuvable : vérifie le code.";return}room=rc;pRef=ref(db,"rooms/"+room+"/players/"+uid);let old=(await get(pRef)).val();me={name:nick,joinedAt:old?.joinedAt||Date.now(),character:old?.character||null};await set(pRef,{name:nick,joinedAt:me.joinedAt,...(me.character?{character:me.character}:{})});onDisconnect(pRef).remove();$("roomCode").value=room;$("roomStatus").textContent="Salon : "+room+" — partage ce code avec tes amis.";show("playersBox");show("setup",!me.character);show("game",!!me.character);show("social",!!me.character);show("world",!!me.character);if(me.character)render();if(roomOff)roomOff();roomOff=onValue(ref(db,"rooms/"+room+"/players"),s=>{$("players").replaceChildren();Object.values(s.val()||{}).forEach(p=>{let x=document.createElement("span");x.className="pill";x.textContent="👤 "+(p.name||"Joueur")+(p.character?.name?" — "+p.character.name:"");$("players").append(x)})});status("Connecté à Firebase ✓",true)}catch(e){$("roomStatus").textContent="Erreur Firebase : "+e.message;status("Vérifie la connexion et les règles Firebase.")}}
 $("createRoom").onclick=()=>enter("",true);$("joinRoom").onclick=()=>enter($("roomCode").value);$("createCharacter").onclick=async()=>{if(!room||!me)return;let name=clean($("charName").value,24);if(!name){$("gameStatus").textContent="Choisis un prénom fictif.";return}let c=fresh();Object.assign(c,{name,age:Math.max(1,Math.min(110,Number($("age").value)||22)),country:clean($("country").value)||"France",city:clean($("city").value)||"Nantes",job:$("job").value,personality:$("personality").value});me.character=c;addEvent(name+" commence une nouvelle vie à "+c.city+", "+c.country+".");await save();show("setup",false);render()};$("doAction").onclick=()=>{if(me?.character)action($("actionText").value)};$("advanceDay").onclick=()=>{if(me?.character)day()};$("roomCode").oninput=e=>e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
 window.addEventListener("error", e => {
