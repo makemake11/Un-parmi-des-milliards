@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101827"><title>Un parmi des milliards — V2 sociale</title>
 <style>
@@ -22,7 +21,7 @@ const firebaseConfig = {
   appId: "1:468750554700:web:b5df6b23f42a04ef6c86e9"
 };
   
-const $=x=>document.getElementById(x),app=initializeApp(cfg),auth=getAuth(app),db=getDatabase(app);let uid=null,room=null,pRef=null,me=null,roomOff=null;
+const $=x=>document.getElementById(x),app=initializeApp(firebaseConfig),auth=getAuth(app),db=getDatabase(app);let uid=null,room=null,pRef=null,me=null,roomOff=null;
 const clean=(v,n=40)=>String(v||"").trim().slice(0,n),show=(id,b=true)=>$(id).classList.toggle("hidden",!b);
 function status(s,ok=false){$("connectionStatus").textContent=s;$("connectionStatus").className="status "+(ok?"ok":"")}
 function newCode(){let s="",a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";for(let i=0;i<6;i++)s+=a[Math.floor(Math.random()*a.length)];return s}
